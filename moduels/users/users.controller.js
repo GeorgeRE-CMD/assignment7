@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { deleteuser, signIn, signUp, updateUser } from "./users.service.js";
+import { signIn, signUp, updateUser } from "./users2.service.js";
 
 const userRouter = Router();
 
@@ -9,12 +9,12 @@ userRouter.post('/sign-up', async (req, res) => {
         const { firstName, lastName, email, password, gender, isActive } = req.body
         const result = await signUp({ firstName, lastName, email, password, gender, isActive });
         res.status(201).json({
-            message: 'user has been added successfully',
-            firstName,
-            lastName,
-            email,
-            gender,
-            isActive
+            id: result._id,
+            firstName: result.firstName,
+            lastName: result.lastName,
+            email: result.email,
+            gender: result.gender,
+            isActive: result.isActive
         })
     } catch (error) {
         if (error.code === 11000) return res.status(409).json({ message: error.message })
@@ -30,28 +30,51 @@ userRouter.post('/sign-in', async (req, res) => {
         });
     }
     const result = await signIn({ email, password });
-    res.status(200).json({ message: 'user logged in successfully', email })
+    res.status(200).json({
+        user: {
+            message: 'user logged in successfully',
+
+        }
+    })
 })
 
+// * getAllUsers
+userRouter.get("/users", async (req, res) => {
+    const users = await getAllUsers();
+    return res.status(200).json({ users });
+});
 // * UPDATE
 userRouter.patch('update/:id', async (req, res) => {
     const userId = req.params.id;
-    const { firstName, lastName, email, password, gender } = req.body;
-    const result = await updateUser(userId, { firstName, lastName, email, password, gender });
+    const result = await updateUser(userId, req.body);
     if (!result) {
         return res.status(404).json({
             message: 'User not found'
         });
     }
-    res.status(200).json({ message: `user has been updated`, firstName, lastName, email, gender });
+    res.status(200).json({
+        message: "user has been updated", user: {
+            id: result._id,
+            firstName: result.firstName,
+            lastName: result.lastName,
+            email: result.email,
+            gender: result.gender
+        }
+    });
 })
 
 // * DELETE-USER
-userRouter.delete('delete/:id', async (req, res) => {
+userRouter.deleteuser('delete/:id', async (req, res) => {
     const userId = req.params.id;
+    if (!userId) {
+        return res.status(400).json({
+            message: "User id is required"
+        });
+    }
+
     const result = await deleteuser(userId);
     if (!result) return res.status(404).json({ message: 'user not found' })
-    res.status(201).json({ message: 'user has been deleted' })
+    res.status(200).json({ message: 'user has been deleted' })
 })
 
 userRouter.use((error, req, res, next) => {
