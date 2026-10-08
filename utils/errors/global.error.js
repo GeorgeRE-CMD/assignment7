@@ -1,4 +1,4 @@
-class HttpAppError extends Error{
+export class HttpAppError extends Error{
     message;
     statusCode;
     data;
@@ -12,4 +12,3 @@ class HttpAppError extends Error{
     }
 }
 
-export default HttpAppError;

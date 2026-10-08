@@ -1,5 +1,3 @@
-
-
 const handleError = (err, req, res, next) => {
     res.status(err['cause']?.status || 500).json(
         {

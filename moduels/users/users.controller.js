@@ -1,13 +1,15 @@
 import { Router } from "express";
 import { signIn, signUp, updateUser } from "./users2.service.js";
+import { validation } from "../../middlewares/zod.middleware.js";
+import { deleteUserValidation, signInValidation, signUpValidation, updateUserValidation } from "../../utils/security/zod.js";
+import { authenticate } from "../../middlewares/token.middleware.js";
 
 const userRouter = Router();
 
 // * SIGN-UP
-userRouter.post('/sign-up', async (req, res) => {
+userRouter.post('/sign-up', validation(signUpValidation), async (req, res) => {
     try {
-        const { firstName, lastName, email, password, gender, isActive } = req.body
-        const result = await signUp({ firstName, lastName, email, password, gender, isActive });
+        const result = await signUp(req.validate);
         res.status(201).json({
             id: result._id,
             firstName: result.firstName,
@@ -22,18 +24,11 @@ userRouter.post('/sign-up', async (req, res) => {
     }
 })
 // * SIGN-IN
-userRouter.post('/sign-in', async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-        return res.status(400).json({
-            message: 'Email and password are required'
-        });
-    }
-    const result = await signIn({ email, password });
+userRouter.post('/sign-in', validation(signInValidation), async (req, res) => {
+    const result = await signIn(req.validate);
     res.status(200).json({
         user: {
             message: 'user logged in successfully',
-
         }
     })
 })
@@ -43,10 +38,17 @@ userRouter.get("/users", async (req, res) => {
     const users = await getAllUsers();
     return res.status(200).json({ users });
 });
+
+
+// *findById
+userRouter.get('/profile', authenticate, async (req, res) => {
+    res.status(200).json({ message: 'user profile retreived successfully', findUser, data: req.userAuth })
+})
+
+
 // * UPDATE
-userRouter.patch('update/:id', async (req, res) => {
-    const userId = req.params.id;
-    const result = await updateUser(userId, req.body);
+userRouter.patch('update', authenticate, validation(updateUserValidation), async (req, res) => {
+    const result = await updateUser(req.userAuth, req.validate);
     if (!result) {
         return res.status(404).json({
             message: 'User not found'
@@ -64,17 +66,14 @@ userRouter.patch('update/:id', async (req, res) => {
 })
 
 // * DELETE-USER
-userRouter.deleteuser('delete/:id', async (req, res) => {
-    const userId = req.params.id;
-    if (!userId) {
-        return res.status(400).json({
-            message: "User id is required"
-        });
+userRouter.delete('delete/:id', validation(deleteUserValidation), async (req, res) => {
+    try {
+        const result = await deleteuser(req.validate.id);
+        if (!result) return res.status(404).json({ message: 'user not found' });
+        res.status(200).json({ message: 'user has been deleted' });
+    } catch (error) {
+        console.log('user cannot be deleted', error);
     }
-
-    const result = await deleteuser(userId);
-    if (!result) return res.status(404).json({ message: 'user not found' })
-    res.status(200).json({ message: 'user has been deleted' })
 })
 
 userRouter.use((error, req, res, next) => {

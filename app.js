@@ -1,9 +1,10 @@
+import 'dotenv/config'
 import express from 'express'
 import connect from './db/db.connection.js';
 import './db/models/user.model.js';
 import userRouter from './moduels/users/users.controller.js';
 const app = express();
-const port = 3000;
+const port = Number(process.env.PORT);
 
 app.use(express.json());
 app.use('/user', userRouter);

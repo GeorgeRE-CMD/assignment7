@@ -9,6 +9,9 @@ export class BlogRepository {
     async findOne(data, select) {
         return this.model.findOne(data).select(select);
     }
+    async findById(data) {
+        return await this.model.findById(data);
+    }
     async findAll(data) {
         return this.model.find(data);
     }

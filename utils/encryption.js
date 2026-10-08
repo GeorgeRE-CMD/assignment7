@@ -18,5 +18,4 @@ export function decryption(text) {
     decrypt += decipher.final('utf-8');
     return decrypt
 }
-
 console.log('decrypted',decryption('cf39418c5c8b123f1c4e37db7449330d:eaacb975c26fce7a3381ae11b1dc1901'))
