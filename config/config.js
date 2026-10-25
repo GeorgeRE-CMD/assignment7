@@ -3,7 +3,7 @@ const db = {
     username: 'root',
     password: '1234',
     database: 'blog_db',
-    dialect: 'mysql'
+    dialect: 'mysql',
 };
 
 export default db;

@@ -6,6 +6,9 @@ export class BlogRepository {
     async create(data) {
         return this.model.create(data);
     }
+    async update(filters, data, options) {
+        return this.model.update(filters, data, options)
+    }
     async findOne(data, select) {
         return this.model.findOne(data).select(select);
     }

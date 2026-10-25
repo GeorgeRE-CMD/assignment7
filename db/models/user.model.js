@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { roles } from "../../config/system.config.js";
 const userSchema = new mongoose.Schema(
     {
         firstName: {
@@ -37,6 +38,15 @@ const userSchema = new mongoose.Schema(
             required: true,
             enum: ['male', 'female'],
             default: 'male'
+        },
+        role: {
+            type: String,
+            enum: ['user', 'admin'],
+            default: 'user'
+        },
+        isEmailVerified: {
+            type:Boolean,
+            default:false
         },
         isActive: {
             type: Boolean,

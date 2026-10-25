@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { signIn, signUp, updateUser } from "./users2.service.js";
+import { confirmEmail, signIn, signOut, signUp, updateUser } from "./users2.service.js";
 import { validation } from "../../middlewares/zod.middleware.js";
 import { deleteUserValidation, signInValidation, signUpValidation, updateUserValidation } from "../../utils/security/zod.js";
 import { authenticate } from "../../middlewares/token.middleware.js";
+import { refreshAuthenticate } from "../../middlewares/refresh.middleware.js";
 
 const userRouter = Router();
 
@@ -11,13 +12,18 @@ userRouter.post('/sign-up', validation(signUpValidation), async (req, res) => {
     try {
         const result = await signUp(req.validate);
         res.status(201).json({
-            id: result._id,
-            firstName: result.firstName,
-            lastName: result.lastName,
-            email: result.email,
-            gender: result.gender,
-            isActive: result.isActive
-        })
+            message: 'created',
+            user: {
+                id: result.user._id,
+                firstName: result.user.firstName,
+                lastName: result.user.lastName,
+                email: result.user.email,
+                gender: result.user.gender,
+                role: result.user.role
+            },
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken
+        });
     } catch (error) {
         if (error.code === 11000) return res.status(409).json({ message: error.message })
         res.status(400).json({ message: error.message })
@@ -29,10 +35,32 @@ userRouter.post('/sign-in', validation(signInValidation), async (req, res) => {
     res.status(200).json({
         user: {
             message: 'user logged in successfully',
+            user: {
+                email: result.email,
+                accessToken: result.accessToken,
+                refreshToken: result.refreshToken
+            }
         }
     })
 })
 
+userRouter.post('/sign-out', authenticate, refreshAuthenticate, async (req, res) => {
+    const result = await signOut({
+        jti: req.user.jti,
+        exp: req.user.exp
+    },
+        {
+            jti: req.refreshUser.jti,
+            exp: req.refreshUser.exp
+        });
+    res.status(200).json({ message: "logged out successfully", result })
+})
+
+userRouter.patch('/confirm-email', async (req, res) => {
+    const { email, otp } = req.body;
+    const result = await confirmEmail(email, otp);
+    res.status(200).json({ message: 'email changed successfully', data: result })
+})
 // * getAllUsers
 userRouter.get("/users", async (req, res) => {
     const users = await getAllUsers();
