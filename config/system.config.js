@@ -14,11 +14,6 @@ export const roles = {
     }
 }
 
-export const email = {
-    user : process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-}
-
 
 export const redis = {
     URL: process.env.REDIS_URL
@@ -27,3 +22,15 @@ export const tokenEnum = Object.freeze({
     ACCESS: "access",
     REFRESH: "refresh"
 })
+
+export const emailConfig = {
+    EMAIL_USER:process.env.EMAIL_USER,
+    EMAIL_PASSWORD:process.env.EMAIL_PASS
+}
+
+
+export const allowedExtensions = {
+    img: ['jpeg, png'],
+    video: ['mp3, mp4'],
+    files: 'pdf'
+}

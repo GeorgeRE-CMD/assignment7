@@ -1,50 +1,20 @@
-import { email } from "../../config/system.config";
-import { emailTransporter } from "../clients/email.client.js"
-import { EventEmitter } from "node:events";
-export const sendEmail = async function ({
-    to,
-    subject = "No reply",
-    message = "",
-    attachments = []
-}) {
-    if (!message && !attachments.length) {
-        throw new Error("Message or attachments are required");
-    }
+import { emailConfig } from "../../config/system.config.js"
+import { transporter } from "../clients/email.client.js"
+
+export const sendEmail = async ({ to, subject = 'no reply', message, html, attachments = [] }) => {
     try {
-        const info = await emailTransporter.sendMail({
-            from: `"Example Team" <${email.user}>`,
+        if (!message && !attachments.length) throw new Error('message or attachments are required')
+        const info = transporter.sendMail({
+            from: emailConfig.EMAIL_USER,
             to,
             subject,
-            html: message,
+            message,
+            html: html,
             attachments
-        });
-        console.log("Message sent:", info.messageId);
-        return {
-            success: true,
-            messageId: info.messageId
-        };
-    } catch (err) {
-        console.error("Error while sending mail:", {
-            code: err.code,
-            responseCode: err.responseCode,
-            response: err.response
-        });
-        throw err;
+        })
+        return true
+    } catch (error) {
+        console.log('Error while sending mail:', error);
+        throw error
     }
-};
-
-
-export const eventEmitter = new EventEmitter();
-EventEmitter.on('send email event', ({ to,
-    subject = "No reply",
-    message = "",
-    attachments = [] }) => {
-    sendEmail({
-        to,
-        subject,
-        message,
-        attachments
-    })
-    console.log('data recieved successfully')
-})
-
+}

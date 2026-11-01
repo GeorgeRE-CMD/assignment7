@@ -1,35 +1,40 @@
-import 'dotenv/config'
-import express from 'express'
+import 'dotenv/config';
+import express from 'express';
+import helmet from 'helmet';
 import connect from './db/db.connection.js';
 import './db/models/user.model.js';
 import userRouter from './moduels/users/users.controller.js';
 import { connectToRedis } from './common/clients/redis.connection.js';
-import { emailTransporter } from './common/clients/email.client.js';
-import { emailConfig } from './config/email.config.js';
-const app = express();
-const port = Number(process.env.PORT);
+import { createRateLimiter } from './middlewares/ratelimiter.middleware.js';
 
-app.use(express.json());
-app.use('/user', userRouter);
-const startServer = async () => {
+const app = express();
+
+const port = Number(process.env.PORT) || 3000;
+
+const startServer = async function () {
     try {
+        // 1. Connect to MongoDB
         await connect();
-        app.listen(port, () => {
-            console.log('server is listening on port 3000')
+
+        // 2. Connect to Redis
+        await connectToRedis();
+
+        // 3. Register middlewares
+        app.use(helmet(), createRateLimiter);
+        app.use(express.json());
+
+        // 4. Register routes
+        app.use('/user', userRouter);
+
+        // 5. Start the server
+        app.listen(port, function () {
+            console.log(`Server is listening on port ${port}`);
         });
+
     } catch (error) {
-        console.log('server internal error', error);
+        console.error('Server internal error:', error);
+        process.exit(1);
     }
-}
-startServer();
-connectToRedis();
-console.log({
-    userExists: Boolean(emailConfig.auth.user),
-    passExists: Boolean(emailConfig.auth.pass)
-});
-try {
-    await emailTransporter.verify();
-    console.log("Server is ready to take our messages");
-} catch (err) {
-    console.error("Verification failed:", err);
-}
+};
+
+await startServer();

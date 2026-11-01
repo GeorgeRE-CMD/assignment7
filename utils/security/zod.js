@@ -12,6 +12,14 @@ export const signUpValidation = z.strictObject({
     password: z.string().trim().min(4),
     gender: z.enum(['male', 'female']).default('male')
 })
+export const confirmEmailValidation = z.object({
+    email: z.string().trim().toLowerCase().email(),
+
+    otp: z.string()
+        .trim()
+        .length(6, 'OTP must be exactly 6 digits')
+        .regex(/^\d{6}$/, 'OTP must contain only numbers')
+});
 export const updateUserValidation = z.strictObject({
     firstName: z.string().trim().min(4).max(10).regex(/^[a-zA-Z]+$/).optional(),
     lastName: z.string().trim().min(4).max(10).regex(/^[a-zA-Z]+$/).optional(),
@@ -19,7 +27,11 @@ export const updateUserValidation = z.strictObject({
     password: z.string().trim().min(8).max(100).optional(),
     gender: z.enum(['male', 'female']).optional()
 });
+export const passwordValidate = z.strictObject({
+    oldPassword: z.string().trim().min(4),
+    newPassword: z.string().trim().min(4),
 
+})
 export const deleteUserValidation = z.strictObject({
     id: z.string().refine(
         function (value) {
