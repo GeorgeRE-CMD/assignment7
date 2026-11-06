@@ -4,13 +4,15 @@ export const roles = {
         access_Token_Secret: process.env.USER_TOKEN_ENCRYPT_KEY,
         access_Token_Expire: process.env.USER_TOKEN_EXPIRE,
         refresh_Token_Secret: process.env.USER_REFRESH_TOKEN_ENCRYPT_KEY,
-        refresh_Token_Expire: process.env.USER_REFRESH_TOKEN_EXPIRE
+        refresh_Token_Expire: process.env.USER_REFRESH_TOKEN_EXPIRE,
+        TEMPORARY_TOKEN: process.env.TWO_FA_SECRET
     },
     admin: {
         access_Token_Secret: process.env.ADMIN_TOKEN_ENCRYPT_KEY,
         access_Token_Expire: process.env.ADMIN_TOKEN_EXPIRE,
         refresh_Token_Secret: process.env.ADMIN_REFRESH_TOKEN_ENCRYPT_KEY,
-        refresh_Token_Expire: process.env.ADMIN_REFRESH_TOKEN_EXPIRE
+        refresh_Token_Expire: process.env.ADMIN_REFRESH_TOKEN_EXPIRE,
+        TEMPORARY_TOKEN: process.env.TWO_FA_SECRET
     }
 }
 
@@ -24,8 +26,8 @@ export const tokenEnum = Object.freeze({
 })
 
 export const emailConfig = {
-    EMAIL_USER:process.env.EMAIL_USER,
-    EMAIL_PASSWORD:process.env.EMAIL_PASS
+    EMAIL_USER: process.env.EMAIL_USER,
+    EMAIL_PASSWORD: process.env.EMAIL_PASS
 }
 
 

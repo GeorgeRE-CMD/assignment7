@@ -1,10 +1,10 @@
 import { isValidObjectId } from "mongoose";
 import { userRepository } from "../../db/repositories/user.repository.js";
 import { hash, verify } from "../../utils/hashing.js";
-import { generateToken } from "../../utils/token/token.utils.js";
+import { generateToken, verifyToken } from "../../utils/token/token.utils.js";
 import { roles, tokenEnum } from "../../config/system.config.js";
 import { v4 as uuidv4 } from 'uuid';
-import { calculate, del, get, set } from "../../common/services/redis.services.js";
+import { calculate, del, expire, get, incr, set } from "../../common/services/redis.services.js";
 import crypto from 'crypto'
 import { sendEmail } from "../../common/services/email.service.js";
 // * signUp
@@ -106,15 +106,28 @@ export const signIn = async function (body) {
         { email },
         '+password'
     );
-    if (!checkEmail) {
-        throw new Error('Invalid email or password');
+    const identifier = checkEmail
+        ? `user:${checkEmail._id}`
+        : `email:${email}`;
+    const attemptsKey = `login_attempts:${identifier}`;
+    const bannedKey = `banned:${identifier}`;
+    const isBanned = await get(bannedKey);
+
+    if (isBanned) {
+        throw new Error('Account temporarily locked');
     }
-    const checkPassword = await verify(
-        password,
-        checkEmail.password
-    );
-    if (!checkPassword) {
-        throw new Error('Invalid email or password');
+    const checkPassword = checkEmail
+        ? await verify(password, checkEmail.password)
+        : false;
+    if (!checkEmail || !checkPassword) {
+        const attempts = await incr(attemptsKey);
+        if (attempts === 1) await expire(attemptsKey, 300);
+        if (attempts === 5) {
+            await set(bannedKey, 'banned', { EX: 300 });
+            await del(attemptsKey)
+            throw new Error('Too many failed login attempts. Try again after 5 minutes.');
+        }
+        throw new Error('invalid email or password')
     }
     const roleConfig = jwtConfig[checkEmail.role];
     const accessTokenId = uuidv4();
@@ -129,7 +142,6 @@ export const signIn = async function (body) {
         roleConfig.access_Token_Secret,
         { expiresIn: roleConfig.access_Token_Expire, accessTokenId }
     );
-    set()
     if (!accessToken) throw new Error('token not found');
     const refreshToken = generateToken(
         payload,
@@ -137,8 +149,8 @@ export const signIn = async function (body) {
         { expiresIn: roleConfig.refresh_Token_Expire, refreshTokenId }
     );
     if (!refreshToken) throw new Error('token not found');
-    await set(`access token : ${user._id}`, accessTokenId, { EX: 3600 })
-    await set(`refresh token : ${user._id}`, refreshTokenId, { EX: 3600 })
+    await set(`access token : ${checkEmail._id}`, accessTokenId, { EX: 3600 })
+    await set(`refresh token : ${checkEmail._id}`, refreshTokenId, { EX: 3600 })
     return {
         message: 'Login successful',
         accessToken,
@@ -146,6 +158,125 @@ export const signIn = async function (body) {
     };
 };
 
+
+// * otp 2fa
+export const sendOtp2fa = async (body) => {
+    const { email, password } = body;
+    const user = await userRepository.findOne({ email }, '+password');
+    if (!user) throw new Error('invalid email or passwrd');
+    const verifyPassword = await verify(password, user.password);
+    if (!verifyPassword) throw new Error('invalid email or passsword');
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const hashOtp = await hash(otp);
+    sendEmail({
+        to: user.email,
+        subject: 'verification confirmation',
+        message: 'otp',
+        html: <h>`${otp}`</h>
+    })
+    const challengeId = uuidv4()
+    await set(`2fa:login:${challengeId}`, hashOtp, { EX: 300 });
+    return ({
+        message: 'otp has been sent successfully',
+        challengeId
+    })
+}
+
+// * verifyOtp2fa
+
+export const verifyOtp2fa = async function (body, challengeToken) {
+    const { otp } = body;
+
+    // 1. Validate challenge token
+    const decoded = verifyToken(
+        challengeToken,
+        process.env.TWO_FA_SECRET
+    );
+
+    if (decoded.purpose !== '2fa' || !decoded.challengeId) {
+        throw new Error('Invalid challenge');
+    }
+
+    // 2. Redis keys
+    const redisKey = `2fa:login:${decoded.challengeId}`;
+    const attemptsKey = `2fa:attempts:${decoded.challengeId}`;
+
+    // 3. Get hashed OTP
+    const redisOtp = await get(redisKey);
+
+    if (!redisOtp) {
+        throw new Error('OTP expired or invalid challenge');
+    }
+
+    // 4. Verify OTP
+    const isOtpValid = await verify(otp, redisOtp);
+
+    if (!isOtpValid) {
+        const attempts = await incr(attemptsKey);
+
+        if (attempts === 1) {
+            await expire(attemptsKey, 300);
+        }
+
+        if (attempts >= 3) {
+            await del(redisKey);
+            await del(attemptsKey);
+
+            throw new Error('Your OTP has expired');
+        }
+
+        throw new Error('Invalid OTP');
+    }
+
+    // 5. Find user
+    const user = await userRepository.findById(decoded.sub);
+
+    if (!user) {
+        await del(redisKey);
+        await del(attemptsKey);
+
+        throw new Error('User not found');
+    }
+
+    // 6. Delete challenge
+    await del(redisKey);
+    await del(attemptsKey);
+
+    // 7. Generate tokens
+    const payload = {
+        _id: user._id,
+        email: user.email,
+        role: user.role
+    };
+
+    const roleConfig = jwtConfig[user.role];
+
+    const accessTokenId = uuidv4();
+    const refreshTokenId = uuidv4();
+
+    const accessToken = generateToken(
+        payload,
+        roleConfig.access_Token_Secret,
+        {
+            expiresIn: roleConfig.access_Token_Expire,
+            jwtid: accessTokenId
+        }
+    );
+    const refreshToken = generateToken(
+        payload,
+        roleConfig.refresh_Token_Secret,
+        {
+            expiresIn: roleConfig.refresh_Token_Expire,
+            jwtid: refreshTokenId
+        }
+    );
+    return {
+        message: 'OTP verified successfully',
+        accessToken,
+        refreshToken
+    };
+};
+;
 // * change email
 
 export const verifyNewEmail = async (body) => {
@@ -349,7 +480,7 @@ export const resetPassword = async function (body) {
 // * add profile pic
 export const uploadProfilePic = async (file, user) => {
     return userRepository.updateOne(user._id, { profileImage: file.path }, { new: true });
-    
+
 }
 // * signOut
 export const signOut = async (accessTokenData, refreshTokenData) => {

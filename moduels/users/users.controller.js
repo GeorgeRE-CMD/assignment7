@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { changeEmail, changePassword, confirmEmail, forgetPassword, resetPassword, signIn, signOut, signUp, updateUser, verifyForgetPassword, verifyNewEmail } from "./users2.service.js";
+import { changeEmail, changePassword, confirmEmail, forgetPassword, resetPassword, sendOtp2fa, signIn, signOut, signUp, updateUser, verifyForgetPassword, verifyNewEmail } from "./users2.service.js";
 import { validation } from "../../middlewares/zod.middleware.js";
 import { confirmEmailValidation, deleteUserValidation, passwordValidate, signInValidation, signUpValidation, updateUserValidation } from "../../utils/security/zod.js";
 import { authenticate } from "../../middlewares/token.middleware.js";
@@ -119,17 +119,32 @@ userRouter.post('/sign-out', authenticate, refreshAuthenticate, async (req, res)
 // * add file
 userRouter.post('/add-file', multerUpload({ desiredPath: '/covers' }).single('image'), async (req, res) => {
     const result = await fileTypeFromFile(req.file.path);
-    res.status(200).json({message:"file has added successfully", data:req.file, result})
+    res.status(200).json({ message: "file has added successfully", data: req.file, result })
 })
 userRouter.post('/profile_picture', multerUpload({ desiredPath: '/profile' }).single('profile'), async (req, res) => {
     const file = req.file;
-    const {authUser} = req 
+    const { authUser } = req
     const result = await upladProfilePic(file, authUser)
-    res.status(200).json({message:"profile picture is uploaded successfully", result})
+    res.status(200).json({ message: "profile picture is uploaded successfully", result })
 })
 
+// * 2fa
+userRouter.post('/2fa-otp', async (req, res) => {
+    const { email, password } = req.body
+    const result = await sendOtp2fa(otp)
+    res.status(201).json({
+        messagge: "otp has been sent successfully",
+        message: result.message,
+        challengeId: result.challengeId
+    })
+})
+// * verifyOtp2fa
+userRouter.post('/verifyOtp2fa', async (req, res) => {
+    const { otp } = req.body;
+    const result = verifyOtp (otp);
+    res.status()
 
-
+})
 // * getAllUsers
 userRouter.get("/users", async (req, res) => {
     const users = await getAllUsers();
