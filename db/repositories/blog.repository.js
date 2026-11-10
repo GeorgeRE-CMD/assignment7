@@ -15,8 +15,8 @@ export class BlogRepository {
     async findById(data) {
         return await this.model.findById(data);
     }
-    async findAll(data) {
-        return this.model.find(data);
+    async findAll(filters = {}, projection = null, options = {}) {
+        return this.model.find(filters, projection, options);
     }
     async findById(id) {
         return this.model.findById(id);
@@ -26,5 +26,15 @@ export class BlogRepository {
     }
     async findByIdAndDelete(id) {
         return this.model.findByIdAndDelete(id);
+    }
+    async updateStatus(filter, status) {
+        return await this.model.findOneAndUpdate(
+            filter,
+            { status },
+            {
+                new: true,
+                runValidators: true
+            }
+        );
     }
 }

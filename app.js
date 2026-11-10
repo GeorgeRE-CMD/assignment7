@@ -6,6 +6,7 @@ import './db/models/user.model.js';
 import userRouter from './moduels/users/users.controller.js';
 import { connectToRedis } from './common/clients/redis.connection.js';
 import { createRateLimiter } from './middlewares/ratelimiter.middleware.js';
+import messageRouter from './moduels/messages/message.controller.js';
 
 const app = express();
 
@@ -25,7 +26,7 @@ const startServer = async function () {
 
         // 4. Register routes
         app.use('/user', userRouter);
-
+        app.use('/message', messageRouter)
         // 5. Start the server
         app.listen(port, function () {
             console.log(`Server is listening on port ${port}`);

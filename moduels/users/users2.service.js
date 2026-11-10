@@ -172,7 +172,7 @@ export const sendOtp2fa = async (body) => {
         to: user.email,
         subject: 'verification confirmation',
         message: 'otp',
-        html: <h>`${otp}`</h>
+        html: ` <h>${otp}</h>`
     })
     const challengeId = uuidv4()
     await set(`2fa:login:${challengeId}`, hashOtp, { EX: 300 });

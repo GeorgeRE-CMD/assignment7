@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import * as z from 'zod'
 
 export const signInValidation = z.strictObject({
@@ -42,3 +43,13 @@ export const deleteUserValidation = z.strictObject({
         }
     )
 });
+export const recieverIdValidation = z.strictObject({
+    id: z.string().refine(
+        function (value) {
+            return mongoose.isValidObjectId(value)
+        },
+        {
+            message: 'invalid user id'
+        }
+    )
+})
